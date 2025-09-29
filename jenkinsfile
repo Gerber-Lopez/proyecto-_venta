@@ -128,14 +128,6 @@ pipeline {
 
 | true'
                     archiveArtifacts artifacts: 'zap_reports/zap-dast-results.json', onlyIfSuccessful: false
-                    script {
-                        try {
-                            sh 'docker stop php-app-temp'
-                        } catch (e) {
-                            echo "El contenedor php-app-temp no estaba corriendo, lo cual es esperado."
-                        }
-                        archiveArtifacts artifacts: 'zap_reports/zap-dast-results.json', onlyIfSuccessful: false
-                    }
                 }
             }
         }
@@ -149,13 +141,6 @@ pipeline {
                     echo "Desplegando el servicio final en el puerto ${HOST_PORT}."
                     
                     sh "docker stop ${APP_IMAGE_NAME} |
-                    // Detener y eliminar contenedor existente si existe
-                    try {
-                        sh "docker stop ${APP_IMAGE_NAME}"
-                        sh "docker rm ${APP_IMAGE_NAME}"
-                    } catch (e) {
-                        echo "El contenedor ${APP_IMAGE_NAME} no existía. Se creará uno nuevo."
-                    }
 
 | true"
                     sh "docker rm ${APP_IMAGE_NAME} |

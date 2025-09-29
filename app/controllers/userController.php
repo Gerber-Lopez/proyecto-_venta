@@ -81,7 +81,6 @@
 		    if($email!=""){
 				if(filter_var($email, FILTER_VALIDATE_EMAIL)){
 					$check_email=$this->ejecutarConsulta("SELECT usuario_email FROM usuario WHERE usuario_email='$email'");
-					$check_email=$this->ejecutarConsulta("SELECT usuario_email FROM usuario WHERE usuario_email_encrypt='$email'");
 					if($check_email->rowCount()>0){
 						$alerta=[
 							"tipo"=>"simple",
@@ -120,7 +119,6 @@
 
             # Verificando usuario #
 		    $check_usuario=$this->ejecutarConsulta("SELECT usuario_usuario FROM usuario WHERE usuario_usuario='$usuario'");
-		    $check_usuario=$this->ejecutarConsulta("SELECT usuario_usuario FROM usuario WHERE usuario_usuario_encrypt='$usuario'");
 		    if($check_usuario->rowCount()>0){
 		    	$alerta=[
 					"tipo"=>"simple",
@@ -134,7 +132,6 @@
 
 		    # Verificando caja #
 		    $check_caja=$this->ejecutarConsulta("SELECT caja_id FROM caja WHERE caja_id='$caja'");
-		    $check_caja=$this->ejecutarConsulta("SELECT caja_id FROM caja WHERE caja_id_encrypt='$caja'");
 		    if($check_caja->rowCount()<=0){
 		        $alerta=[
 					"tipo"=>"simple",
@@ -308,18 +305,14 @@
 			if(isset($busqueda) && $busqueda!=""){
 
 				$consulta_datos="SELECT * FROM usuario WHERE ((usuario_id!='".$_SESSION['id']."' AND usuario_id!='1') AND (usuario_nombre LIKE '%$busqueda%' OR usuario_apellido LIKE '%$busqueda%' OR usuario_email LIKE '%$busqueda%' OR usuario_usuario LIKE '%$busqueda%')) ORDER BY usuario_nombre ASC LIMIT $inicio,$registros";
-				$consulta_datos="SELECT * FROM usuario WHERE ((usuario_id!='".$_SESSION['id']."' AND usuario_id!='1') AND (usuario_nombre LIKE '%$busqueda%' OR usuario_apellido LIKE '%$busqueda%' OR usuario_email_encrypt LIKE '%$busqueda%' OR usuario_usuario_encrypt LIKE '%$busqueda%')) ORDER BY usuario_nombre ASC LIMIT $inicio,$registros";
 
 				$consulta_total="SELECT COUNT(usuario_id) FROM usuario WHERE ((usuario_id!='".$_SESSION['id']."' AND usuario_id!='1') AND (usuario_nombre LIKE '%$busqueda%' OR usuario_apellido LIKE '%$busqueda%' OR usuario_email LIKE '%$busqueda%' OR usuario_usuario LIKE '%$busqueda%'))";
-				$consulta_total="SELECT COUNT(usuario_id) FROM usuario WHERE ((usuario_id!='".$_SESSION['id']."' AND usuario_id!='1') AND (usuario_nombre LIKE '%$busqueda%' OR usuario_apellido LIKE '%$busqueda%' OR usuario_email_encrypt LIKE '%$busqueda%' OR usuario_usuario_encrypt LIKE '%$busqueda%'))";
 
 			}else{
 
 				$consulta_datos="SELECT * FROM usuario WHERE usuario_id!='".$_SESSION['id']."' AND usuario_id!='1' ORDER BY usuario_nombre ASC LIMIT $inicio,$registros";
-				$consulta_datos="SELECT * FROM usuario WHERE usuario_id_encrypt!='".$_SESSION['id']."' AND usuario_id!='1' ORDER BY usuario_nombre ASC LIMIT $inicio,$registros";
 
 				$consulta_total="SELECT COUNT(usuario_id) FROM usuario WHERE usuario_id!='".$_SESSION['id']."' AND usuario_id!='1'";
-				$consulta_total="SELECT COUNT(usuario_id) FROM usuario WHERE usuario_id_encrypt!='".$_SESSION['id']."' AND usuario_id!='1'";
 
 			}
 
@@ -437,7 +430,6 @@
 
 			# Verificando usuario #
 		    $datos=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_id='$id'");
-		    $datos=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_id_encrypt='$id'");
 		    if($datos->rowCount()<=0){
 		        $alerta=[
 					"tipo"=>"simple",
@@ -453,7 +445,6 @@
 
 		    # Verificando ventas #
 		    $check_ventas=$this->ejecutarConsulta("SELECT usuario_id FROM venta WHERE usuario_id='$id' LIMIT 1");
-		    $check_ventas=$this->ejecutarConsulta("SELECT usuario_id FROM venta WHERE usuario_id_encrypt='$id' LIMIT 1");
 		    if($check_ventas->rowCount()>0){
 		        $alerta=[
 					"tipo"=>"simple",
@@ -501,7 +492,6 @@
 
 			# Verificando usuario #
 		    $datos=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_id='$id'");
-		    $datos=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_id_encrypt='$id'");
 		    if($datos->rowCount()<=0){
 		        $alerta=[
 					"tipo"=>"simple",
@@ -554,7 +544,6 @@
 
 		    # Verificando administrador #
 		    $check_admin=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_usuario='$admin_usuario' AND usuario_id='".$_SESSION['id']."'");
-		    $check_admin=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_usuario_encrypt='$admin_usuario' AND usuario_id_encrypt='".$_SESSION['id']."'");
 		    if($check_admin->rowCount()==1){
 
 		    	$check_admin=$check_admin->fetch();
@@ -643,7 +632,6 @@
 		    if($email!="" && $datos['usuario_email']!=$email){
 				if(filter_var($email, FILTER_VALIDATE_EMAIL)){
 					$check_email=$this->ejecutarConsulta("SELECT usuario_email FROM usuario WHERE usuario_email='$email'");
-					$check_email=$this->ejecutarConsulta("SELECT usuario_email FROM usuario WHERE usuario_email_encrypt='$email'");
 					if($check_email->rowCount()>0){
 						$alerta=[
 							"tipo"=>"simple",
@@ -700,7 +688,6 @@
             # Verificando usuario #
             if($datos['usuario_usuario']!=$usuario){
 			    $check_usuario=$this->ejecutarConsulta("SELECT usuario_usuario FROM usuario WHERE usuario_usuario='$usuario'");
-			    $check_usuario=$this->ejecutarConsulta("SELECT usuario_usuario FROM usuario WHERE usuario_usuario_encrypt='$usuario'");
 			    if($check_usuario->rowCount()>0){
 			        $alerta=[
 						"tipo"=>"simple",
@@ -716,7 +703,6 @@
             # Verificando caja #
             if($datos['caja_id']!=$caja){
 			    $check_caja=$this->ejecutarConsulta("SELECT caja_id FROM caja WHERE caja_id='$caja'");
-			    $check_caja=$this->ejecutarConsulta("SELECT caja_id FROM caja WHERE caja_id_encrypt='$caja'");
 			    if($check_caja->rowCount()<=0){
 			        $alerta=[
 						"tipo"=>"simple",
@@ -802,7 +788,6 @@
 
 			# Verificando usuario #
 		    $datos=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_id='$id'");
-		    $datos=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_id_encrypt='$id'");
 		    if($datos->rowCount()<=0){
 		        $alerta=[
 					"tipo"=>"simple",
@@ -892,7 +877,6 @@
 
 			# Verificando usuario #
 		    $datos=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_id='$id'");
-		    $datos=$this->ejecutarConsulta("SELECT * FROM usuario WHERE usuario_id_encrypt='$id'");
 		    if($datos->rowCount()<=0){
 		        $alerta=[
 					"tipo"=>"simple",
