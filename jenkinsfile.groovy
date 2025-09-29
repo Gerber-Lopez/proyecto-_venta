@@ -69,11 +69,15 @@ pipeline {
             steps {
                 script {
                     echo "Construyendo la imagen de artefacto con Dockerfile modificado..."
-                    sh "docker build -t ${APP_IMAGE_NAME}:${APP_IMAGE_TAG}."
+                    // Añadimos las banderas --tlsverify, --tlscacert, etc. para forzar la configuración correcta
+                    sh "docker --tlsverify --tlscacert=/certs/client/ca.pem --tlscert=/certs/client/cert.pem --tlskey=/certs/client/key.pem -H tcp://docker:2376 build -t ${APP_IMAGE_NAME}:${APP_IMAGE_TAG} ."
                     
                     echo "Ejecutando escaneo de vulnerabilidades (Image Checker - Trivy)..."
                     sh """
-                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                        docker --tlsverify --tlscacert=/certs/client/ca.pem --tlscert=/certs/client/cert.pem --tlskey=/certs/client/key.pem -H tcp://docker:2376 run --rm \
+                        --network jenkins \
+                        -v jenkins-docker-certs:/certs/client:ro \
+                        -e DOCKER_HOST=tcp://docker:2376 -e DOCKER_TLS_VERIFY=1 -e DOCKER_CERT_PATH=/certs/client \
                         aquasec/trivy:latest image \
                         --severity HIGH,CRITICAL \
                         --format json -o trivy-results.json \
@@ -99,7 +103,7 @@ pipeline {
 
                     // 1. Despliegue temporal de la aplicación PHP.
                     // El contenedor ahora responde en el puerto 80.
-                    sh """
+                    sh """docker --tlsverify --tlscacert=/certs/client/ca.pem --tlscert=/certs/client/cert.pem --tlskey=/certs/client/key.pem -H tcp://docker:2376 \
                         docker run -d --rm \
                             --name php-app-temp \
                             --network jenkins \
@@ -111,7 +115,7 @@ pipeline {
                     
                     echo "Iniciando escaneo DAST con OWASP ZAP Automation Framework..."
                     // 2. Ejecutar OWASP ZAP. Apunta al puerto 80 del alias de red.
-                    sh """
+                    sh """docker --tlsverify --tlscacert=/certs/client/ca.pem --tlscert=/certs/client/cert.pem --tlskey=/certs/client/key.pem -H tcp://docker:2376 \
                         docker run --rm \
                             -v $PWD/zap_reports:/zap/wrk:rw \
                             --network jenkins \
@@ -126,7 +130,7 @@ pipeline {
                 always {
                     script {
                         try {
-                            sh 'docker stop php-app-temp'
+                            sh 'docker --tlsverify --tlscacert=/certs/client/ca.pem --tlscert=/certs/client/cert.pem --tlskey=/certs/client/key.pem -H tcp://docker:2376 stop php-app-temp'
                         } catch (e) {
                             echo "El contenedor php-app-temp no estaba corriendo o ya fue detenido."
                         }
@@ -146,13 +150,13 @@ pipeline {
                     
                     // Detener y eliminar el contenedor si ya existe, sin causar errores.
                     try {
-                        sh "docker stop ${APP_IMAGE_NAME}"
-                        sh "docker rm ${APP_IMAGE_NAME}"
+                        sh "docker --tlsverify --tlscacert=/certs/client/ca.pem --tlscert=/certs/client/cert.pem --tlskey=/certs/client/key.pem -H tcp://docker:2376 stop ${APP_IMAGE_NAME}"
+                        sh "docker --tlsverify --tlscacert=/certs/client/ca.pem --tlscert=/certs/client/cert.pem --tlskey=/certs/client/key.pem -H tcp://docker:2376 rm ${APP_IMAGE_NAME}"
                     } catch (e) {
                         echo "El contenedor ${APP_IMAGE_NAME} no existía. Se creará uno nuevo."
                     }
 
-                    sh """
+                    sh """docker --tlsverify --tlscacert=/certs/client/ca.pem --tlscert=/certs/client/cert.pem --tlskey=/certs/client/key.pem -H tcp://docker:2376 \
                         docker run -d \
                             --name ${APP_IMAGE_NAME} \
                             -p ${HOST_PORT}:80 \

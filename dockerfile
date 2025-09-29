@@ -1,21 +1,11 @@
-# Dockerfile Modificado: Cambiamos a la imagen con Apache integrado
+# Usar una imagen base oficial de PHP con Apache
 FROM php:8.2-apache
 
-# NOTA: En la imagen php-apache, las extensiones se instalan con 'docker-php-ext-install'
-# Instala extensiones PHP necesarias (ejemplos comunes)
-RUN docker-php-ext-install mysqli gd curl
+# Instalar las extensiones de PHP necesarias (pdo_mysql)
+RUN docker-php-ext-install pdo_mysql
 
-# Define el directorio de trabajo donde la aplicación se ejecutará (estándar de Apache)
-WORKDIR /var/www/html
+# Copiar los archivos de la aplicación al directorio web del servidor Apache
+COPY . /var/www/html/
 
-# Copia el código fuente completo del proyecto (app, config, index.php, etc.)
-COPY. /var/www/html
-
-# Configuración de Seguridad: Cambiar el propietario de los archivos a 'www-data' (estándar de Apache)
-RUN chown -R www-data:www-data /var/www/html
-
-# Apache ya expone el puerto 80 por defecto
+# Exponer el puerto 80 para que el servidor web sea accesible
 EXPOSE 80
-
-# El comando por defecto inicia Apache/PHP.
-CMD ["apache2-foreground"]
