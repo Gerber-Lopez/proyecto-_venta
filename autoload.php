@@ -1,11 +1,16 @@
 <?php
 
-    spl_autoload_register(function($clase){
-
-        $archivo= __DIR__."/".$clase.".php";
-        $archivo=str_replace("\\","/",$archivo);
-
-        if(is_file($archivo)){
-            require_once $archivo;
-        } 
-    });
+spl_autoload_register(function ($class) {
+    // Reemplaza el namespace 'app\' con el directorio 'app/'
+    $prefix = 'app\\';
+    $base_dir = __DIR__ . '/app/';
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
+    }
+    $relative_class = substr($class, $len);
+    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
+    if (file_exists($file)) {
+        require $file;
+    }
+});
