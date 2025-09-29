@@ -1,0 +1,177 @@
+// jenkinsfile
+
+pipeline {
+    agent any
+
+    environment {
+        // Usamos una imagen que tiene curl y php para descargar PHPStan
+        PHP_BUILD_IMAGE = 'php:8.2-cli-alpine' 
+
+        // Nombres y etiquetas para la imagen del artefacto.
+        APP_IMAGE_NAME = "php-web-app"
+        APP_IMAGE_TAG = "${env.BUILD_NUMBER}"
+
+        // URL del despliegue temporal para la prueba DAST. 
+        // ¡Ahora sí responde en el puerto 80 gracias a la modificación del Dockerfile!
+        DAST_TARGET_URL = "http://php-app-temp:80"
+        
+        HOST_PORT = 8080
+    }
+
+    stages {
+        // ===============================================
+        // FASE 1: Checkout y Preparación del Código (Incluye Instalación de PHPStan)
+        // ===============================================
+        stage('Checkout & Environment Setup') {
+            agent { docker { image "${env.PHP_BUILD_IMAGE}" } }
+            
+            steps {
+                echo "Iniciando pipeline para proyecto PHP."
+                checkout scm
+                sh 'mkdir -p zap_reports'
+                
+                // INSTALACIÓN CRÍTICA DE PHPSTAN (sin Composer)
+                echo "Descargando PHPStan PHAR..."
+                // Descarga el ejecutable de PHPStan y lo coloca en la raíz del workspace.
+                // Usamos curl para la descarga directa del PHAR.
+                sh 'curl -L -o phpstan.phar https://github.com/phpstan/phpstan/releases/download/1.11.7/phpstan.phar'
+                sh 'chmod +x phpstan.phar'
+            }
+        }
+
+        // ===============================================
+        // FASE 2: SAST (Análisis Estático de Código)
+        // ===============================================
+        stage('SAST (Code Analysis)') {
+            // Reutiliza el mismo agente con el ejecutable PHPStan descargado
+            agent { docker { image "${env.PHP_BUILD_IMAGE}" } }
+            
+            steps {
+                echo "Ejecutando SAST con PHPStan (Nivel 5)..."
+                
+                // Se ejecuta usando el PHAR descargado directamente.
+                sh './phpstan.phar analyse \
+                    --configuration phpstan.neon \
+                    --error-format=json \
+                  . > phpstan-sast-results.json'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'phpstan-sast-results.json', onlyIfSuccessful: false
+                }
+            }
+        }
+
+        // ===============================================
+        // FASE 3: Construcción y Escaneo de Imágenes
+        // ===============================================
+        stage('Build & Image Checker (Trivy)') {
+            steps {
+                script {
+                    echo "Construyendo la imagen de artefacto con Dockerfile modificado..."
+                    sh "docker build -t ${APP_IMAGE_NAME}:${APP_IMAGE_TAG}."
+                    
+                    echo "Ejecutando escaneo de vulnerabilidades (Image Checker - Trivy)..."
+                    sh """
+                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                        aquasec/trivy:latest image \
+                        --severity HIGH,CRITICAL \
+                        --format json -o trivy-results.json \
+                        ${APP_IMAGE_NAME}:${APP_IMAGE_TAG}
+                    """
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-results.json', onlyIfSuccessful: false
+                }
+            }
+        }
+
+        // ===============================================
+        // FASE 4: DAST (Pruebas Dinámicas)
+        // ===============================================
+        stage('DAST (Dynamic Testing)') {
+            agent none
+            steps {
+                script {
+                    echo "Desplegando temporalmente la aplicación para ZAP (servidor web incluido)..."
+
+                    // 1. Despliegue temporal de la aplicación PHP.
+                    // El contenedor ahora responde en el puerto 80.
+                    sh """
+                        docker run -d --rm \
+                            --name php-app-temp \
+                            --network jenkins \
+                            --network-alias php-app-temp \
+                            ${APP_IMAGE_NAME}:${APP_IMAGE_TAG}
+                    """
+                    
+                    sleep 30
+                    
+                    echo "Iniciando escaneo DAST con OWASP ZAP Automation Framework..."
+                    // 2. Ejecutar OWASP ZAP. Apunta al puerto 80 del alias de red.
+                    sh """
+                        docker run --rm \
+                            -v $PWD/zap_reports:/zap/wrk:rw \
+                            --network jenkins \
+                            ghcr.io/zaproxy/zaproxy:stable \
+                            zap-baseline.py \
+                            -t ${DAST_TARGET_URL} \
+                            -J /zap/wrk/zap-dast-results.json  
+                    """
+                }
+            }
+            post {
+                always {
+                    sh 'docker stop php-app-temp |
+
+| true'
+                    archiveArtifacts artifacts: 'zap_reports/zap-dast-results.json', onlyIfSuccessful: false
+                    script {
+                        try {
+                            sh 'docker stop php-app-temp'
+                        } catch (e) {
+                            echo "El contenedor php-app-temp no estaba corriendo, lo cual es esperado."
+                        }
+                        archiveArtifacts artifacts: 'zap_reports/zap-dast-results.json', onlyIfSuccessful: false
+                    }
+                }
+            }
+        }
+
+        // ===============================================
+        // FASE 5: Despliegue Final
+        // ===============================================
+        stage('Final Deployment & Service Launch') {
+            steps {
+                script {
+                    echo "Desplegando el servicio final en el puerto ${HOST_PORT}."
+                    
+                    sh "docker stop ${APP_IMAGE_NAME} |
+                    // Detener y eliminar contenedor existente si existe
+                    try {
+                        sh "docker stop ${APP_IMAGE_NAME}"
+                        sh "docker rm ${APP_IMAGE_NAME}"
+                    } catch (e) {
+                        echo "El contenedor ${APP_IMAGE_NAME} no existía. Se creará uno nuevo."
+                    }
+
+| true"
+                    sh "docker rm ${APP_IMAGE_NAME} |
+
+| true"
+
+                    sh """
+                        docker run -d \
+                            --name ${APP_IMAGE_NAME} \
+                            -p ${HOST_PORT}:80 \
+                            --restart always \
+                            ${APP_IMAGE_NAME}:${APP_IMAGE_TAG}
+                    """
+                    echo "La aplicación está corriendo en http://localhost:${HOST_PORT}."
+                }
+            }
+        }
+    }
+}
